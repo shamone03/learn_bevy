@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["flappy_bird", "sandbox"]
+
+[workspace.dependencies]
+bevy = "0.15.0"
+
