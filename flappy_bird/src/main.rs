@@ -1,86 +1,63 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
+
+struct FlappyBird;
 
 #[derive(Component)]
-struct Person {
-    name: String,
+struct Player;
+
+#[derive(Component, Default)]
+struct PhysicsBody {
+    velocity: Vec2,
 }
 
-fn init(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    commands.spawn(Person {
-        name: "Saul".to_string(),
-    });
-    commands.spawn(Person {
-        name: "Waltuh".to_string(),
-    });
-    commands.spawn(Person {
-        name: "Jesse".to_string(),
-    });
+const GRAVITY: f32 = 9.81;
+const JUMP: f32 = 9.;
+
+fn setup(mut commands: Commands, assets: Res<AssetServer>) {
     commands.spawn(Camera2d);
-    [
-        meshes.add(Circle::new(50.0)),
-        meshes.add(CircularSector::new(50.0, 1.0)),
-        meshes.add(CircularSegment::new(50.0, 1.25)),
-        meshes.add(Ellipse::new(25.0, 50.0)),
-        meshes.add(Annulus::new(25.0, 50.0)),
-        meshes.add(Capsule2d::new(25.0, 50.0)),
-        meshes.add(Rhombus::new(75.0, 100.0)),
-        meshes.add(Rectangle::new(50.0, 100.0)),
-        meshes.add(RegularPolygon::new(50.0, 6)),
-        meshes.add(Triangle2d::new(
-            Vec2::Y * 50.0,
-            Vec2::new(-50.0, -50.0),
-            Vec2::new(50.0, -50.0),
-        )),
-    ]
-    .into_iter()
-    .enumerate()
-    .for_each(|(i, mesh)| {
-        commands.spawn((
-            Mesh2d(mesh),
-            MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::WHITE))),
-            Transform::from_xyz((i * 100) as f32, 0., 0.),
-        ));
-    })
+    let bird = Sprite::from_image(assets.load("bevy_bird.png"));
+
+    commands.spawn((Player, bird, Transform::IDENTITY, PhysicsBody::default()));
 }
 
-fn all_people(time: Res<Time>, mut timer: ResMut<TimedResource>, query: Query<&Person>) {
-    if timer.0.tick(time.delta()).just_finished() {
-        query
-            .into_iter()
-            .for_each(|Person { name }| println!("{name}"));
+fn apply_gravity(mut query: Query<&mut PhysicsBody>, time: Res<Time>) {
+    query.iter_mut().for_each(|mut pbody| {
+        pbody.velocity -= GRAVITY * time.delta_secs();
+    });
+}
+
+fn apply_physics(mut query: Query<(&mut Transform, &PhysicsBody)>, time: Res<Time>) {
+    query.iter_mut().for_each(|(mut transform, pbody)| {
+        transform.translation.y += pbody.velocity.y * time.delta_secs();
+    });
+}
+
+fn input(inputs: Res<ButtonInput<KeyCode>>, mut query: Query<(&Player, &mut PhysicsBody)>) {
+    if let Ok((_, mut body)) = query.get_single_mut() {
+        if inputs.just_pressed(KeyCode::Space) {
+            body.velocity.y = JUMP;
+        }
     }
 }
 
-// fn update_people(mut query: Query<&mut Person>) {
-//     for mut person in &mut query {
-//         person.name += "hello";
-//     }
-// }
-
-#[derive(Resource)]
-struct TimedResource(Timer);
-
-struct People;
-
-impl Plugin for People {
+impl Plugin for FlappyBird {
     fn build(&self, app: &mut App) {
-        app.insert_resource(TimedResource(Timer::from_seconds(
-            2.0,
-            TimerMode::Repeating,
-        )));
-        // add any function or tuple of functions whose arguments implement `SystemParams`
-        app.add_systems(Startup, init)
-            .add_systems(Update, all_people);
+        app.add_systems(Startup, setup);
+        app.add_systems(Update, (input, apply_gravity, apply_physics));
     }
 }
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(People)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Flappy Bird".into(),
+                position: WindowPosition::Centered(MonitorSelection::Index(0)),
+                resolution: Vec2::new(720., 720.).into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
+        .add_plugins(FlappyBird)
         .run();
 }
