@@ -1,4 +1,4 @@
-use bevy::{asset::AssetLoader, prelude::*, sprite::Anchor, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
 use rand::Rng;
 
 struct FlappyBird;
@@ -44,7 +44,6 @@ fn setup(
     let pipe = assets.load("pipe.png");
 
     if let Ok(window) = window.get_single() {
-        println!("{:?}", window.size());
         spawn_pipes(&mut commands, pipe.clone_weak(), window.height());
         commands.insert_resource(Game {
             pipe,
@@ -96,14 +95,13 @@ fn spawn_pipes(commands: &mut Commands, pipe: Handle<Image>, height: f32) {
 
     commands.spawn_batch(
         (1..=NUM_PIPES)
-            .map(|i| {
+            .flat_map(|i| {
                 get_pipes(
                     (i * HORZ_GAP) as f32,
                     rng.gen_range((0.)..=(height / 3.)),
                     pipe.clone_weak(),
                 )
             })
-            .flatten()
             .collect::<Vec<_>>(),
     );
 }
