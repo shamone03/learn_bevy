@@ -49,18 +49,13 @@ fn setup(
         commands.insert_resource(Game {
             pipe,
             window: window.size(),
-            restart: true,
+            restart: false,
         });
     }
 
     let mut bird = Sprite::from_image(assets.load("bird.png"));
-    bird.custom_size = Some(Vec2 { x: 100., y: 100. });
-    commands.spawn((
-        Player,
-        bird,
-        Transform::from_xyz(0., -100., 0.),
-        PhysicsBody::default(),
-    ));
+    bird.custom_size = Some(Vec2 { x: 50., y: 50. });
+    commands.spawn((Player, bird, Transform::IDENTITY, PhysicsBody::default()));
 }
 
 fn get_pipes(
@@ -148,23 +143,36 @@ fn input(inputs: Res<ButtonInput<KeyCode>>, mut query: Query<(&Player, &mut Phys
     }
 }
 
-fn check_offscreen(query: Query<(&Player, &Transform)>, mut game: ResMut<Game>) {
-    if let Ok((_, body)) = query.get_single() {
-        game.restart =
-            !((-game.window.y / 2.)..=(game.window.y / 2.)).contains(&body.translation.y);
-    }
-}
-
-fn check_collision(
-    player_query: Query<(&Player, &Transform)>,
+fn check_restart(
+    query: Query<(&Player, &Transform)>,
     pipe_query: Query<(&Pipe, &Transform)>,
     mut game: ResMut<Game>,
 ) {
-    if let Ok((_, player)) = player_query.get_single() {
-        game.restart = pipe_query.iter().any(|(_, pipe)| {
-            Rect::from_center_size(pipe.translation.xy(), Vec2::new(PIPE_WIDTH, PIPE_HEIGHT))
-                .contains(player.translation.xy())
-        });
+    if let Ok((_, player)) = query.get_single() {
+        game.restart = !((-game.window.y / 2.)..=(game.window.y / 2.))
+            .contains(&player.translation.y)
+            || pipe_query.iter().any(|(_, pipe)| {
+                Rect::from_center_size(pipe.translation.xy(), Vec2::new(PIPE_WIDTH, PIPE_HEIGHT))
+                    .contains(player.translation.xy())
+            });
+    }
+}
+
+fn restart(
+    game: Res<Game>,
+    mut player_query: Query<(&Player, &mut Transform, &mut PhysicsBody)>,
+    pipe_query: Query<(&Pipe, Entity)>,
+    mut commands: Commands,
+) {
+    if game.restart {
+        if let Ok((_, mut player, mut physics)) = player_query.get_single_mut() {
+            player.translation = Vec3::ZERO;
+            physics.velocity = Vec2::ZERO;
+        }
+        pipe_query
+            .iter()
+            .for_each(|(_, entity)| commands.entity(entity).despawn());
+        spawn_pipes(&mut commands, game.pipe.clone_weak(), game.window.y);
     }
 }
 
@@ -174,13 +182,16 @@ impl Plugin for FlappyBird {
         app.add_systems(
             Update,
             (
-                input,
-                apply_gravity,
-                apply_physics,
-                check_offscreen,
-                check_collision,
-                move_pipes,
-            ),
+                (
+                    input,
+                    apply_gravity,
+                    apply_physics,
+                    check_restart,
+                    move_pipes,
+                ),
+                restart,
+            )
+                .chain(),
         );
     }
 }
