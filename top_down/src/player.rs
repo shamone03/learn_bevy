@@ -90,18 +90,6 @@ pub mod input {
             self.just_pressed.clear();
             self.just_released.clear();
         }
-
-        // pub fn pressed(&self, input: PlayerInput) -> bool {
-        //     self.pressed.contains(&input)
-        // }
-
-        // pub fn just_pressed(&self, input: PlayerInput) -> bool {
-        //     self.just_pressed.contains(&input)
-        // }
-
-        // pub fn just_released(&self, input: PlayerInput) -> bool {
-        //     self.just_released.contains(&input)
-        // }
     }
 
     pub fn convert(input: &KeyCode) -> Option<PlayerInput> {
@@ -150,6 +138,7 @@ pub fn movement(
     time: Res<Time>,
 ) {
     player.iter_mut().for_each(|(_, mut transform)| {
-        transform.translation += time.delta_secs() * actions.axis.extend(0.) * 100.;
+        transform.translation +=
+            time.delta_secs() * actions.axis.normalize_or_zero().extend(0.) * 100.;
     });
 }
