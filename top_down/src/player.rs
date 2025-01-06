@@ -24,23 +24,12 @@ pub mod input {
         Right,
     }
 
-    #[derive(Resource)]
+    #[derive(Resource, Default)]
     pub struct PlayerAction {
         pressed: HashSet<PlayerInput>,
         just_pressed: HashSet<PlayerInput>,
         just_released: HashSet<PlayerInput>,
         pub axis: Vec2,
-    }
-
-    impl Default for PlayerAction {
-        fn default() -> Self {
-            Self {
-                pressed: Default::default(),
-                just_pressed: Default::default(),
-                just_released: Default::default(),
-                axis: Default::default(),
-            }
-        }
     }
 
     impl PlayerAction {
