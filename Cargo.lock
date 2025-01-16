@@ -3270,6 +3270,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "noise",
+ "rand",
 ]
 
 [[package]]
