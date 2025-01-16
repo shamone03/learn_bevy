@@ -5,7 +5,7 @@
 # You may check the current default at
 #   https://github.com/Canop/bacon/blob/main/defaults/default-bacon.toml
 
-default_job = "check"
+default_job = "run-long"
 env.CARGO_TERM_COLOR = "always"
 
 [jobs.check]
@@ -85,7 +85,7 @@ background = true
 # a binding `r = job:run-long` at the end of this file .
 [jobs.run-long]
 command = [
-    "cargo", "run", "--bin", "proc_gen"
+    "cargo", "run", "--bin", "top_down"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true

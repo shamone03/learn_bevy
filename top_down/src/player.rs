@@ -1,15 +1,12 @@
 use bevy::{
     asset::Handle,
     image::Image,
-    math::Vec2,
-    prelude::{Camera, Camera2d, Component, GlobalTransform, Query, Res, ResMut, Transform, With},
+    math::{Vec2, Vec3},
+    prelude::{Component, Query, Res, ResMut, Transform},
     sprite::Sprite,
     time::Time,
-    window::{PrimaryWindow, Window},
 };
-use input::{CursorPos, PlayerAction};
-
-use crate::PlayerCam;
+use input::PlayerAction;
 
 pub mod input {
     use bevy::utils::HashSet;
@@ -26,9 +23,6 @@ pub mod input {
         Left,
         Right,
     }
-
-    #[derive(Resource)]
-    pub struct CursorPos(Vec2);
 
     #[derive(Resource, Default)]
     pub struct PlayerAction {
@@ -89,10 +83,10 @@ pub mod input {
 
     pub fn convert(input: &KeyCode) -> Option<Direction> {
         match input {
-            KeyCode::KeyW => Some(Direction::Up),
-            KeyCode::KeyA => Some(Direction::Left),
-            KeyCode::KeyS => Some(Direction::Down),
-            KeyCode::KeyD => Some(Direction::Right),
+            KeyCode::KeyW | KeyCode::ArrowUp => Some(Direction::Up),
+            KeyCode::KeyA | KeyCode::ArrowLeft => Some(Direction::Left),
+            KeyCode::KeyS | KeyCode::ArrowDown => Some(Direction::Down),
+            KeyCode::KeyD | KeyCode::ArrowRight => Some(Direction::Right),
             _ => None,
         }
     }
@@ -119,7 +113,7 @@ impl Player {
                 custom_size: Some(Vec2 { x: 50., y: 50. }),
                 ..Sprite::from_image(image)
             },
-            Transform::IDENTITY,
+            Transform::IDENTITY.with_translation(Vec3::new(0., 0., 1.)),
         )
     }
 }
@@ -138,18 +132,16 @@ pub fn movement(
     });
 }
 
-pub fn aim(
-    window: Query<&Window, With<PrimaryWindow>>,
-    camera: Query<(&PlayerCam, &Camera, &GlobalTransform)>,
-) {
-    if let Ok((_, camera, camera_transform)) = camera.get_single() {
-        if let Ok(window) = window.get_single() {
-            if let Some(cursor) = window.cursor_position() {
-                let world_pos = camera.viewport_to_world_2d(camera_transform, cursor);
-                if let Ok(pos) = world_pos {
-                    println!("{cursor:?} {pos:?}");
-                }
-            }
-        }
-    }
-}
+// pub fn aim(
+//     window: Query<&Window, With<PrimaryWindow>>,
+//     camera: Query<(&PlayerCam, &Camera, &GlobalTransform)>,
+// ) {
+//     if let Ok((_, camera, camera_transform)) = camera.get_single() {
+//         if let Ok(window) = window.get_single() {
+//             if let Some(cursor) = window.cursor_position() {
+//                 let world_pos = camera.viewport_to_world_2d(camera_transform, cursor);
+//                 if let Ok(pos) = world_pos {}
+//             }
+//         }
+//     }
+// }

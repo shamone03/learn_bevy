@@ -10,3 +10,4 @@ opt-level = 3
 
 [workspace.dependencies]
 bevy = "0.15.0"
+proc_gen = { path = "proc_gen" }
