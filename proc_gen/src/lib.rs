@@ -51,8 +51,7 @@ fn make_map(mut commands: Commands, assets: Res<AssetServer>) {
 fn get_chunks(perlin: &'_ Perlin) -> impl Iterator<Item = (f32, f32, f32)> + '_ {
     cartesian_product(-10..10, -10..10)
         .flatten()
-        .map(move |(chunk_x, chunk_y)| get_chunk(perlin, chunk_x, chunk_y))
-        .flatten()
+        .flat_map(move |(chunk_x, chunk_y)| get_chunk(perlin, chunk_x, chunk_y))
 }
 
 fn get_chunk(
