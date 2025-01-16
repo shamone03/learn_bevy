@@ -7,23 +7,26 @@ use rand::Rng;
 
 struct Terrain;
 
-const CHUNK_X: i32 = 50;
-const CHUNK_Y: i32 = 50;
+const CHUNK_X: i32 = 10;
+const CHUNK_Y: i32 = 10;
 
 const NOISE_ZOOM: f64 = 1. / 10.;
 
-fn get_chunk_extents(
-    chunk_pos_x: i32,
-    chunk_pos_y: i32,
-) -> (RangeInclusive<i32>, RangeInclusive<i32>) {
-    (
-        ((chunk_pos_x * CHUNK_X) - (CHUNK_X / 2))..=((chunk_pos_x * CHUNK_X) + (CHUNK_X / 2)),
-        ((chunk_pos_y * CHUNK_Y) - (CHUNK_Y / 2))..=((chunk_pos_y * CHUNK_Y) + (CHUNK_Y / 2)),
-    )
-}
+const BLOCK_SIZE: f32 = 5.;
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
+}
+
+fn cartesian_product<T: IntoIterator + Clone>(
+    a: T,
+    b: T,
+) -> impl Iterator<Item = impl Iterator<Item = (T::Item, T::Item)>>
+where
+    T::Item: Clone + Copy,
+{
+    a.into_iter()
+        .map(move |x| b.clone().into_iter().map(move |y| (x, y)))
 }
 
 fn make_map(
@@ -35,37 +38,52 @@ fn make_map(
 
     let perlin = Perlin::new(rng.gen());
 
-    let noise_map = (-10..10).map(|chunk_x| {
-        (-10..10).map(move |chunk_y| {
-            let (x_range, y_range) = get_chunk_extents(chunk_x, chunk_y);
-            x_range.map(move |i| {
-                y_range.clone().map(move |j| {
-                    (
-                        i as f32,
-                        j as f32,
-                        perlin
-                            .get([(i as f64) * NOISE_ZOOM, (j as f64) * NOISE_ZOOM])
-                            .abs() as f32,
-                    )
-                })
-            })
-        })
+    let noise_map = get_chunks(&perlin);
+
+    let bundles = noise_map.flatten().filter_map(|(x, y, z)| {
+        (z > 0.5).then_some((
+            Mesh2d(meshes.add(Circle::new(BLOCK_SIZE))),
+            MeshMaterial2d(materials.add(Color::linear_rgba(1., 0., 0., z))),
+            Transform::from_xyz(x * BLOCK_SIZE * 2., y * BLOCK_SIZE * 2., 0.),
+        ))
     });
 
-    
-    let bundles = noise_map
-        .flatten()
-        .flatten()
-        .flatten()
-        .filter_map(|(x, y, z)| {
-            (z > 0.5).then_some((
-                Mesh2d(meshes.add(Circle::new(5.0))),
-                MeshMaterial2d(materials.add(Color::linear_rgba(1., 0., 0., z))),
-                Transform::from_xyz(x * 10., y * 10., 0.),
-            ))
-        });
-
     commands.spawn_batch(bundles.collect::<Vec<_>>());
+}
+
+fn get_chunks(
+    perlin: &'_ Perlin,
+) -> impl Iterator<Item = impl Iterator<Item = (f32, f32, f32)> + '_> {
+    cartesian_product(-3..=3, -3..=3)
+        .flatten()
+        .map(move |(chunk_x, chunk_y)| get_chunk(perlin, chunk_x, chunk_y))
+}
+
+fn get_chunk(
+    perlin: &'_ Perlin,
+    chunk_x: i32,
+    chunk_y: i32,
+) -> impl Iterator<Item = (f32, f32, f32)> + '_ {
+    let (x_range, y_range) = get_chunk_extents(chunk_x, chunk_y);
+    cartesian_product(x_range, y_range).flatten().map(|(i, j)| {
+        (
+            i as f32,
+            j as f32,
+            perlin
+                .get([(i as f64) * NOISE_ZOOM, (j as f64) * NOISE_ZOOM])
+                .abs() as f32,
+        )
+    })
+}
+
+fn get_chunk_extents(
+    chunk_pos_x: i32,
+    chunk_pos_y: i32,
+) -> (RangeInclusive<i32>, RangeInclusive<i32>) {
+    (
+        ((chunk_pos_x * CHUNK_X) - (CHUNK_X / 2))..=((chunk_pos_x * CHUNK_X) + (CHUNK_X / 2)),
+        ((chunk_pos_y * CHUNK_Y) - (CHUNK_Y / 2))..=((chunk_pos_y * CHUNK_Y) + (CHUNK_Y / 2)),
+    )
 }
 
 impl Plugin for Terrain {
