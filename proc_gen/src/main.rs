@@ -18,15 +18,16 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn cartesian_product<T: IntoIterator + Clone>(
-    a: T,
-    b: T,
-) -> impl Iterator<Item = impl Iterator<Item = (T::Item, T::Item)>>
+fn cartesian_product<A, B>(
+    a: A,
+    b: B,
+) -> impl Iterator<Item = impl Iterator<Item = (A::Item, B::Item)>>
 where
-    T::Item: Clone + Copy,
+    A: Iterator,
+    A::Item: Copy,
+    B: Iterator + Clone,
 {
-    a.into_iter()
-        .map(move |x| b.clone().into_iter().map(move |y| (x, y)))
+    a.into_iter().map(move |x| b.clone().map(move |y| (x, y)))
 }
 
 fn make_map(
@@ -35,8 +36,9 @@ fn make_map(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let mut rng = rand::thread_rng();
-
-    let perlin = Perlin::new(rng.gen());
+    let seed = rng.gen();
+    println!("seed: {seed}");
+    let perlin = Perlin::new(seed);
 
     let noise_map = get_chunks(&perlin);
 
