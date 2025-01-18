@@ -14,7 +14,14 @@ struct PlayerCam;
 
 fn setup(assets: Res<AssetServer>, mut commands: Commands) {
     let camera = Camera2d;
-    commands.spawn((camera, PlayerCam));
+    commands.spawn((
+        camera,
+        PlayerCam,
+        Camera {
+            clear_color: ClearColorConfig::Custom(Color::linear_rgb(24. / 255., 101. / 255., 163. / 255.)),
+            ..Default::default()
+        },
+    ));
     commands.insert_resource(PlayerAction::default());
 
     let player = assets.load("amogus.png");
