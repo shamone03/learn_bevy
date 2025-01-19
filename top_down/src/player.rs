@@ -1,12 +1,18 @@
 use bevy::{
     asset::Handle,
     image::Image,
-    math::{Vec2, Vec3},
-    prelude::{Component, Query, Res, ResMut, Transform},
+    math::{Quat, Vec2, Vec3},
+    prelude::{
+        Bundle, Camera, Children, Component, GlobalTransform, Query, Res, ResMut, Transform, With,
+        Without,
+    },
     sprite::Sprite,
     time::Time,
+    window::{PrimaryWindow, Window},
 };
 use input::PlayerAction;
+
+use crate::{Arrow, PlayerCam};
 
 pub mod input {
     use bevy::utils::HashSet;
@@ -106,14 +112,27 @@ pub mod input {
 }
 
 impl Player {
-    pub fn new(image: Handle<Image>) -> (Player, Sprite, Transform) {
+    pub const Z: f32 = 1.;
+
+    pub fn character(image: Handle<Image>) -> impl Bundle {
         (
             Player,
             Sprite {
                 custom_size: Some(Vec2 { x: 50., y: 50. }),
                 ..Sprite::from_image(image)
             },
-            Transform::IDENTITY.with_translation(Vec3::new(0., 0., 1.)),
+            Transform::IDENTITY.with_translation(Vec3::new(0., 0., Player::Z)),
+        )
+    }
+
+    pub fn pointer(image: Handle<Image>) -> impl Bundle {
+        (
+            Arrow,
+            Sprite {
+                anchor: bevy::sprite::Anchor::Custom(Vec2::new(-1., 0.)),
+                ..Sprite::from_image(image)
+            },
+            Transform::from_xyz(0., 0., Player::Z),
         )
     }
 }
@@ -132,16 +151,52 @@ pub fn movement(
     });
 }
 
-// pub fn aim(
-//     window: Query<&Window, With<PrimaryWindow>>,
-//     camera: Query<(&PlayerCam, &Camera, &GlobalTransform)>,
-// ) {
-//     if let Ok((_, camera, camera_transform)) = camera.get_single() {
-//         if let Ok(window) = window.get_single() {
-//             if let Some(cursor) = window.cursor_position() {
-//                 let world_pos = camera.viewport_to_world_2d(camera_transform, cursor);
-//                 if let Ok(pos) = world_pos {}
-//             }
-//         }
-//     }
-// }
+pub fn aim(
+    window: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&PlayerCam, &Camera, &GlobalTransform)>,
+    player: Query<(&Player, &Transform, &Children), Without<Arrow>>,
+    mut arrow: Query<&mut Transform, With<Arrow>>,
+) {
+    let Some(cursor) = get_cursor_world_pos(window, camera) else {
+        return;
+    };
+
+    let Ok((_, player_transform, children)) = player.get_single() else {
+        return;
+    };
+
+    let Some(id) = children.iter().next() else {
+        return;
+    };
+
+    let Ok(mut transform) = arrow.get_mut(*id) else {
+        return;
+    };
+
+    let Vec2 { x, y } = cursor - player_transform.translation.truncate();
+
+    let angle = y.atan2(x);
+
+    transform.rotation = Quat::from_rotation_z(angle);
+
+    println!("{} {}", angle.to_degrees(), transform.translation);
+}
+
+fn get_cursor_world_pos(
+    window: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&PlayerCam, &Camera, &GlobalTransform)>,
+) -> Option<Vec2> {
+    camera
+        .get_single()
+        .map(|(.., camera, transform)| {
+            window
+                .get_single()
+                .map(|window| {
+                    window
+                        .cursor_position()
+                        .and_then(|cursor| camera.viewport_to_world_2d(transform, cursor).ok())
+                })
+                .ok()?
+        })
+        .ok()?
+}

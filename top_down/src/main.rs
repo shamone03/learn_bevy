@@ -12,20 +12,30 @@ mod player;
 #[derive(Component)]
 struct PlayerCam;
 
+#[derive(Component)]
+struct Arrow;
+
 fn setup(assets: Res<AssetServer>, mut commands: Commands) {
     let camera = Camera2d;
     commands.spawn((
         camera,
         PlayerCam,
         Camera {
-            clear_color: ClearColorConfig::Custom(Color::linear_rgb(24. / 255., 101. / 255., 163. / 255.)),
+            clear_color: ClearColorConfig::Custom(Color::linear_rgb(
+                24. / 255.,
+                101. / 255.,
+                163. / 255.,
+            )),
             ..Default::default()
         },
     ));
     commands.insert_resource(PlayerAction::default());
 
     let player = assets.load("amogus.png");
-    commands.spawn(Player::new(player));
+    let arrow = assets.load("arrow.png");
+    commands
+        .spawn(Player::character(player))
+        .with_child(Player::pointer(arrow));
 }
 
 fn move_camera(
@@ -48,7 +58,7 @@ impl Plugin for TopDown {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);
         app.add_systems(PreUpdate, player_inputs);
-        app.add_systems(Update, (player::movement, move_camera));
+        app.add_systems(Update, (player::movement, player::aim, move_camera));
     }
 }
 
