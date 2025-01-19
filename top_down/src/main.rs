@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use player::{
-    input::{player_inputs, PlayerAction},
+    input::{self},
     Player,
 };
 
@@ -10,16 +10,13 @@ struct TopDown;
 mod player;
 
 #[derive(Component)]
-struct PlayerCam;
+struct MainCam;
 
-#[derive(Component)]
-struct Arrow;
-
-fn setup(assets: Res<AssetServer>, mut commands: Commands) {
+fn setup(mut commands: Commands) {
     let camera = Camera2d;
     commands.spawn((
         camera,
-        PlayerCam,
+        MainCam,
         Camera {
             clear_color: ClearColorConfig::Custom(Color::linear_rgb(
                 24. / 255.,
@@ -29,17 +26,10 @@ fn setup(assets: Res<AssetServer>, mut commands: Commands) {
             ..Default::default()
         },
     ));
-    commands.insert_resource(PlayerAction::default());
-
-    let player = assets.load("amogus.png");
-    let arrow = assets.load("arrow.png");
-    commands
-        .spawn(Player::character(player))
-        .with_child(Player::pointer(arrow));
 }
 
 fn move_camera(
-    mut camera: Query<&mut Transform, (With<PlayerCam>, Without<Player>)>,
+    mut camera: Query<&mut Transform, (With<MainCam>, Without<Player>)>,
     player: Query<(&Player, &Transform)>,
     time: Res<Time>,
 ) {
@@ -56,8 +46,8 @@ fn move_camera(
 
 impl Plugin for TopDown {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-        app.add_systems(PreUpdate, player_inputs);
+        app.add_systems(Startup, (setup, player::setup, input::setup));
+        app.add_systems(PreUpdate, (input::kb_movement, input::mouse_world));
         app.add_systems(Update, (player::movement, player::aim, move_camera));
     }
 }
