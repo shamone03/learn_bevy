@@ -14,7 +14,7 @@ pub struct Cursor(pub Option<Vec2>);
 
 pub fn setup(mut commands: Commands) {
     commands.insert_resource(Cursor::default());
-    commands.insert_resource(PlayerAction::default());
+    commands.insert_resource(PlayerActions::default());
 }
 
 pub fn mouse_world(
@@ -45,62 +45,69 @@ fn get_cursor_world_pos(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
-pub enum Direction {
+pub enum PlayerAction {
     Up,
     Down,
     Left,
     Right,
+    Shoot,
 }
 
 #[derive(Resource, Default)]
-pub struct PlayerAction {
-    pressed: HashSet<Direction>,
-    just_pressed: HashSet<Direction>,
-    just_released: HashSet<Direction>,
+pub struct PlayerActions {
+    pressed: HashSet<PlayerAction>,
+    just_pressed: HashSet<PlayerAction>,
+    just_released: HashSet<PlayerAction>,
     pub axis: Vec2,
 }
 
-impl PlayerAction {
-    pub fn press(&mut self, input: Direction) {
+impl PlayerActions {
+    pub fn press(&mut self, input: PlayerAction) {
         if self.pressed.insert(input) {
             match input {
-                Direction::Up => self.axis.y = 1.,
-                Direction::Down => self.axis.y = -1.,
-                Direction::Left => self.axis.x = -1.,
-                Direction::Right => self.axis.x = 1.,
+                PlayerAction::Up => self.axis.y = 1.,
+                PlayerAction::Down => self.axis.y = -1.,
+                PlayerAction::Left => self.axis.x = -1.,
+                PlayerAction::Right => self.axis.x = 1.,
+                _ => {}
             }
             self.pressed
                 .iter()
                 .for_each(|alr_pressed| match (alr_pressed, input) {
-                    (Direction::Down, Direction::Up) => self.axis.y = 0.,
-                    (Direction::Up, Direction::Down) => self.axis.y = 0.,
-                    (Direction::Left, Direction::Right) => self.axis.x = 0.,
-                    (Direction::Right, Direction::Left) => self.axis.x = 0.,
+                    (PlayerAction::Down, PlayerAction::Up) => self.axis.y = 0.,
+                    (PlayerAction::Up, PlayerAction::Down) => self.axis.y = 0.,
+                    (PlayerAction::Left, PlayerAction::Right) => self.axis.x = 0.,
+                    (PlayerAction::Right, PlayerAction::Left) => self.axis.x = 0.,
                     _ => {}
                 });
             self.just_pressed.insert(input);
         }
     }
 
-    pub fn release(&mut self, input: Direction) {
+    pub fn release(&mut self, input: PlayerAction) {
         if self.pressed.remove(&input) {
             match input {
-                Direction::Up => self.axis.y = 0.,
-                Direction::Down => self.axis.y = 0.,
-                Direction::Left => self.axis.x = 0.,
-                Direction::Right => self.axis.x = 0.,
+                PlayerAction::Up => self.axis.y = 0.,
+                PlayerAction::Down => self.axis.y = 0.,
+                PlayerAction::Left => self.axis.x = 0.,
+                PlayerAction::Right => self.axis.x = 0.,
+                _ => {}
             }
             self.pressed
                 .iter()
                 .for_each(|alr_pressed| match (alr_pressed, input) {
-                    (Direction::Down, Direction::Up) => self.axis.y = -1.,
-                    (Direction::Up, Direction::Down) => self.axis.y = 1.,
-                    (Direction::Left, Direction::Right) => self.axis.x = -1.,
-                    (Direction::Right, Direction::Left) => self.axis.x = 1.,
+                    (PlayerAction::Down, PlayerAction::Up) => self.axis.y = -1.,
+                    (PlayerAction::Up, PlayerAction::Down) => self.axis.y = 1.,
+                    (PlayerAction::Left, PlayerAction::Right) => self.axis.x = -1.,
+                    (PlayerAction::Right, PlayerAction::Left) => self.axis.x = 1.,
                     _ => {}
                 });
             self.just_released.insert(input);
         }
+    }
+
+    pub fn pressed(&self, input: PlayerAction) -> bool {
+        self.pressed.contains(&input)
     }
 
     pub fn clear(&mut self) {
@@ -109,17 +116,18 @@ impl PlayerAction {
     }
 }
 
-pub fn convert(input: &KeyCode) -> Option<Direction> {
+pub fn convert(input: &KeyCode) -> Option<PlayerAction> {
     match input {
-        KeyCode::KeyW | KeyCode::ArrowUp => Some(Direction::Up),
-        KeyCode::KeyA | KeyCode::ArrowLeft => Some(Direction::Left),
-        KeyCode::KeyS | KeyCode::ArrowDown => Some(Direction::Down),
-        KeyCode::KeyD | KeyCode::ArrowRight => Some(Direction::Right),
+        KeyCode::KeyW | KeyCode::ArrowUp => Some(PlayerAction::Up),
+        KeyCode::KeyA | KeyCode::ArrowLeft => Some(PlayerAction::Left),
+        KeyCode::KeyS | KeyCode::ArrowDown => Some(PlayerAction::Down),
+        KeyCode::KeyD | KeyCode::ArrowRight => Some(PlayerAction::Right),
+        KeyCode::Space => Some(PlayerAction::Shoot),
         _ => None,
     }
 }
 
-pub fn kb_movement(mut actions: ResMut<PlayerAction>, mut input: EventReader<KeyboardInput>) {
+pub fn kb_movement(mut actions: ResMut<PlayerActions>, mut input: EventReader<KeyboardInput>) {
     actions.clear();
     input
         .read()

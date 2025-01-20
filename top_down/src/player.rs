@@ -9,7 +9,7 @@ use bevy::{
     sprite::Sprite,
     time::Time,
 };
-use input::{Cursor, PlayerAction};
+use input::{Cursor, PlayerActions};
 
 pub mod input;
 
@@ -52,7 +52,7 @@ pub fn setup(assets: Res<AssetServer>, mut commands: Commands) {
 }
 
 pub fn movement(
-    actions: ResMut<PlayerAction>,
+    actions: ResMut<PlayerActions>,
     mut player: Query<(&Player, &mut Transform)>,
     time: Res<Time>,
 ) {

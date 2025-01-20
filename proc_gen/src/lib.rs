@@ -8,6 +8,7 @@ pub struct Terrain;
 
 pub const CHUNK_X: i32 = 10;
 pub const CHUNK_Y: i32 = 10;
+pub const THRESHOLD: f32 = 0.5;
 
 const NOISE_ZOOM: f64 = 1. / 10.;
 
@@ -35,7 +36,7 @@ fn make_map(mut commands: Commands, assets: Res<AssetServer>) {
     let grass = assets.load("grass.png");
 
     let bundles = noise_map.filter_map(move |(x, y, z)| {
-        (z > 0.5).then_some((
+        (z > THRESHOLD).then_some((
             Sprite {
                 image: grass.clone(),
                 anchor: bevy::sprite::Anchor::BottomLeft,

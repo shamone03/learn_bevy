@@ -1,18 +1,22 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
+use physics::PhysicsBody;
 use player::{
-    input::{self},
+    input::{self, Cursor, PlayerActions},
     Player,
 };
 
 use proc_gen::Terrain;
 struct TopDown;
 
+mod physics;
 mod player;
 
 #[derive(Component)]
 struct MainCam;
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, assets: Res<AssetServer>) {
     let camera = Camera2d;
     commands.spawn((
         camera,
@@ -26,6 +30,15 @@ fn setup(mut commands: Commands) {
             ..Default::default()
         },
     ));
+
+    commands.insert_resource(Game {
+        projectile: assets.load("arrow.png"),
+    });
+
+    commands.insert_resource(ShootTimer(Timer::new(
+        Duration::from_millis(500),
+        TimerMode::Repeating,
+    )));
 }
 
 fn move_camera(
@@ -44,11 +57,61 @@ fn move_camera(
     }
 }
 
+#[derive(Resource)]
+struct Game {
+    projectile: Handle<Image>,
+}
+
+#[derive(Component)]
+struct Projectile;
+
+#[derive(Resource)]
+struct ShootTimer(Timer);
+
+fn shoot(
+    input: Res<PlayerActions>,
+    mut commands: Commands,
+    game: Res<Game>,
+    player: Query<&Transform, With<Player>>,
+    cursor: Res<Cursor>,
+    mut timer: ResMut<ShootTimer>,
+    time: Res<Time>,
+) {
+    if timer.0.tick(time.delta()).just_finished() && input.pressed(input::PlayerAction::Shoot) {
+        let Ok(player) = player.get_single().cloned() else {
+            return;
+        };
+
+        let Some((velocity, angle)) = cursor.0.map(|cur| {
+            let diff = (cur - player.translation.truncate()).normalize_or_zero();
+            (diff * 200., diff.y.atan2(diff.x))
+        }) else {
+            return;
+        };
+
+        commands.spawn((
+            Projectile,
+            PhysicsBody { velocity },
+            player.with_rotation(Quat::from_rotation_z(angle)),
+            Sprite::from_image(game.projectile.clone_weak()),
+        ));
+    }
+}
+
 impl Plugin for TopDown {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (setup, player::setup, input::setup));
         app.add_systems(PreUpdate, (input::kb_movement, input::mouse_world));
-        app.add_systems(Update, (player::movement, player::aim, move_camera));
+        app.add_systems(
+            Update,
+            (
+                player::movement,
+                player::aim,
+                physics::apply_physics,
+                move_camera,
+                shoot,
+            ),
+        );
     }
 }
 
