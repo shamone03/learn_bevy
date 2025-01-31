@@ -72,8 +72,7 @@ fn main() {
                         ..Default::default()
                     }),
                     ..Default::default()
-                })
-                .set(ImagePlugin::default_nearest()),
+                }),
         )
         .add_plugins(TopDown)
         .add_plugins(Terrain)

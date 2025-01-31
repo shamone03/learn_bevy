@@ -2286,6 +2286,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbf6a919d6cf397374f7dfeeea91d974c7c0a7221d0d0f4f20d859d329e53fcc"
 
 [[package]]
+name = "hexa_maze"
+version = "0.1.0"
+
+[[package]]
 name = "hexasphere"
 version = "15.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["flappy_bird", "proc_gen", "sandbox", "top_down"]
+members = ["flappy_bird", "hexa_maze", "proc_gen", "sandbox", "top_down"]
 
 [profile.dev]
 opt-level = 1
